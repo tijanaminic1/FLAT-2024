@@ -19,9 +19,15 @@
 
 ;; Tests for next-posn
 
+(check-equal? (next-posn (make-posn 0 0) 'right) (make-posn 1 0))
+(check-equal? (next-posn (make-posn 1 2) 'left) (make-posn 0 2))
+(check-equal? (next-posn (make-posn 0 0) 'down) (make-posn 0 -1))
+(check-equal? (next-posn (make-posn 1 2) 'up) (make-posn 1 3))
+
+
 ;.................................................
 
-;; symbol integer integer -> symbol
+;; symbol natnum natnum -> symbol
 ;; Purpose: Find new direction, if direction changes 
 (define (next-dir dir len counter)
   (local (;; -> symbol
@@ -37,9 +43,19 @@
 
 ;; Tests for next-dir
 
+(check-equal? (next-dir 'right 3 2) 'up)
+(check-equal? (next-dir 'right 3 1) 'right)
+(check-equal? (next-dir 'up 3 2) 'left)
+(check-equal? (next-dir 'up 3 1) 'up)
+(check-equal? (next-dir 'left 3 1) 'left)
+(check-equal? (next-dir 'left 3 2) 'down)
+(check-equal? (next-dir 'down 3 1) 'down)
+(check-equal? (next-dir 'down 3 2) 'right)
+
+
 ;.................................................
 
-;; integer integer symbol boolean -> integer
+;; natnum natnum symbol boolean -> integer
 ;; Purpose: Find the next length
 (define (next-len len counter dir change-len?)
   (if (and change-len?
@@ -50,9 +66,14 @@
 
 ;; Tests for next-len
 
+(check-equal? (next-len 3 2 'right #t) 3)
+(check-equal? (next-len 3 2 'up #t) 4)
+(check-equal? (next-len 3 2 'up #f) 3)
+(check-equal? (next-len 3 2 'down #t) 4)
+
 ;.................................................
 
-;; integer integer -> integer
+;; natnum natnum -> natnum
 ;; Purpose: Set the counter
 (define (next-counter len counter)
   (if (= (sub1 len) counter)
@@ -61,9 +82,14 @@
 
 ;; Tests for next-counter
 
+(check-equal? (next-counter 3 2) 0)
+(check-equal? (next-counter 3 1) 2)
+(check-equal? (next-counter 5 1) 2)
+(check-equal? (next-counter 10 9) 0)
+
 ;.................................................
 
-;; integer integer boolean-> boolean
+;; natnum natnum boolean-> boolean
 ;; Purpose: Adjust change-len? boolean
 (define (next-cglen len counter change-len?)
   (cond [(and (= counter (sub1 len))
@@ -74,6 +100,11 @@
            
 
 ;; Tests for next-cglen
+
+(check-equal? (next-cglen 3 2 #f) #t)
+(check-equal? (next-cglen 3 1 #f) #f)
+(check-equal? (next-cglen 3 2 #t) #f)
+(check-equal? (next-cglen 3 1 #t) #t)
 
 ;.................................................
 
@@ -90,7 +121,7 @@
   (local (;; posn -> (void)
           ;; Purpose: Print the next posn, and make recursive call
           (define (printer p dir len counter change-len?)
-            (if #;(= p +inf.0) (= len 5)
+            (if (= p +inf.0)
                 (void)
                 (begin
                   (displayln p)
