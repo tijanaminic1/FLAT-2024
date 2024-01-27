@@ -116,7 +116,7 @@
 ;; -> (void)
 ;; Purpose: Print the integer pairs in a 2D Cartesian planes
 (define (print-coords)
-  (local (;; posn dir natnum natnum Boolean -> (void)
+  (local (;; posn natnum natnum natnum Boolean -> (void)
           ;; Purpose: Print the next posn, and make recursive call
           (define (printer p dir len counter change-len?)
             (if (= len +inf.0)
