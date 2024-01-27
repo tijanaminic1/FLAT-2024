@@ -9,7 +9,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Design and implement a function to print the integer pairs in a 2D Cartesian plane.
 
-;; posn symbol -> posn
+;; posn dir -> posn
 ;; Purpose: Given a posn and a direction, determine the next posn
 (define (next-posn p dir)
   (cond [(eq? dir 'right) (make-posn (add1 (posn-x p)) (posn-y p))]
@@ -24,10 +24,9 @@
 (check-equal? (next-posn (make-posn 0 0) 'down) (make-posn 0 -1))
 (check-equal? (next-posn (make-posn 1 2) 'up) (make-posn 1 3))
 
-
 ;.................................................
 
-;; symbol natnum natnum -> symbol
+;; dir natnum natnum -> symbol
 ;; Purpose: Find new direction, if direction changes 
 (define (next-dir dir len counter)
   (local (;; -> symbol
@@ -52,10 +51,9 @@
 (check-equal? (next-dir 'down 3 1) 'down)
 (check-equal? (next-dir 'down 3 2) 'right)
 
-
 ;.................................................
 
-;; natnum natnum symbol boolean -> integer
+;; natnum natnum dir Boolean -> integer
 ;; Purpose: Find the next length
 (define (next-len len counter dir change-len?)
   (if (and change-len?
@@ -89,7 +87,7 @@
 
 ;.................................................
 
-;; natnum natnum boolean-> boolean
+;; natnum natnum Boolean-> boolean
 ;; Purpose: Adjust change-len? boolean
 (define (next-cglen len counter change-len?)
   (cond [(and (= counter (sub1 len))
@@ -110,7 +108,7 @@
 
 ;; Data Definitions:
 ;; p           = posn
-;; dir         = direction of arrow
+;; dir         = symbol representing the direction of the arrow
 ;; len         = length the sequential arrows pointing in the same direction
 ;; counter     = keeps track of traversed arrows in len
 ;; change-len? = if true, len will increase by 1 at next direction change
@@ -118,10 +116,10 @@
 ;; -> (void)
 ;; Purpose: Print the integer pairs in a 2D Cartesian planes
 (define (print-coords)
-  (local (;; posn -> (void)
+  (local (;; posn natnum natnum natnum Boolean -> (void)
           ;; Purpose: Print the next posn, and make recursive call
           (define (printer p dir len counter change-len?)
-            (if (= p +inf.0)
+            (if (= len +inf.0)
                 (void)
                 (begin
                   (displayln p)
