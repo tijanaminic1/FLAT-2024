@@ -55,12 +55,12 @@ function to generate an email address.
 (define D (create-union-regexp dig))
 
 ;; possible combinations of letter and digits
-(define LLD (concat-regexp L (concat-regexp L D)))
-(define LDL (concat-regexp L (concat-regexp D L)))
-(define random-word-letters (kleenestar-regexp L))
+(define LD (concat-regexp L D))
+(define DL (concat-regexp D L))
+(define random-word-letters (concat-regexp L (kleenestar-regexp L)))
 
 ;; user
-(define user (kleenestar-regexp (union-regexp LLD LDL)))
+(define user (concat-regexp L (kleenestar-regexp (union-regexp LD DL))))
 
 ;; domain
 (define domain (concat-regexp random-word-letters ending))
@@ -94,6 +94,125 @@ function to generate an email address.
 
 (check-equal? (is-email? '(t i j a n a @ g m a i l |.| c o m)) #t)
 (check-equal? (is-email? '(@ |.| c o m)) #f)
-(check-equal? (is-email? '(t i j a n a @ dot c o m)) #f)
+(check-equal? (is-email? '(t i j a n a @ |.| c o m)) #f)
 (check-equal? (is-email? '(t i j a n a @ g m a i l |.|)) #f)
-(check-equal? (is-email? '(t i j a n a @ g m a i c o m)) #f)
+(check-equal? (is-email? '(t i j a n a @ g m a i c o |.| m)) #f)
+(check-equal? (is-email? '(t i j a n a @ g m a i l c o m)) #f)
+(check-equal? (is-email? '(@ g m a i l |.| c o m)) #f)
+
+
+
+;; [natnum>0] → word
+;; Purpose: Generate the word of the given length
+(define (generate . n)
+  (define MAX-KS-REPS 6)
+  (define MAX-LENGTH (if (null? n) 10 (first n)))
+  (define (gen-word r . m)
+    (cond
+      [(singleton-regexp? r) (convert-singleton r)]
+      [(concat-regexp? r)
+       (let [(w1 (gen-word (concat-regexp-r1 r)))
+             (w2 (gen-word (concat-regexp-r2 r)))]
+         (append w1 w2))]
+      [(union-regexp? r) (gen-word (pick-regexp r))]
+      [(kleenestar-regexp? r)
+       (flatten (build-list
+                 (pick-reps MAX-KS-REPS)
+                 (λ (i)
+                   (gen-word (kleenestar-regexp-r1 r)))))]))
+  (gen-word email MAX-LENGTH))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
