@@ -85,7 +85,9 @@ function to generate an email address.
            (= (length (filter (λ (el) (equal? el '@)) w)) 1)
            (or (equal? (take-right w 4) '(dot e d u))
                (equal? (take-right w 4) '(dot n e t))
-               (equal? (take-right w 4) '(dot c o m))))))
+               (equal? (take-right w 4) '(dot c o m)))
+           (not (empty? (drop (rest (member '@ w)) 4)))
+           (not (empty? (rest (rest (member '@ (reverse w)))))))))
 
 
 
