@@ -70,7 +70,6 @@ function to generate an email address.
 
 
 ;; is-email?
-;; los -> Boolean
 ;; Purpose: To determine whether a given word is an email
 (define (is-email? w)
   (if (empty? w)
@@ -80,20 +79,20 @@ function to generate an email address.
            (andmap (λ (el) (or (member el lowers)
                                (member el digits)
                                (equal? el '@)
-                               (equal? el '|.|)))
+                               (equal? el 'dot)))
                    w)
            (member (first w) lowers)
            (= (length (filter (λ (el) (equal? el '@)) w)) 1)
-           (or (equal? (take-right w 4) '(|.| e d u))
-               (equal? (take-right w 4) '(|.| n e t))
-               (equal? (take-right w 4) '(|.| c o m)))
+           (or (equal? (take-right w 4) '(dot e d u))
+               (equal? (take-right w 4) '(dot n e t))
+               (equal? (take-right w 4) '(dot c o m)))
            (not (empty? (drop (rest (member '@ w)) 4)))
            (not (empty? (rest (rest (member '@ (reverse w)))))))))
 
 
 
-(check-equal? (is-email? '(t i j a n a @ g m a i l |.| c o m)) #t)
-(check-equal? (is-email? '(@ |.| c o m)) #f)
+(check-equal? (is-email? '(t i j a n a @ g m a i l dot c o m)) #t)
+(check-equal? (is-email? '(@ dot c o m)) #f)
 (check-equal? (is-email? '(t i j a n a @ dot c o m)) #f)
-(check-equal? (is-email? '(t i j a n a @ g m a i l |.|)) #f)
+(check-equal? (is-email? '(t i j a n a @ g m a i l dot)) #f)
 (check-equal? (is-email? '(t i j a n a @ g m a i c o m)) #f)
