@@ -73,22 +73,21 @@ function to generate an email address.
 ;; los -> Boolean
 ;; Purpose: To determine whether a given word is an email
 (define (is-email? w)
-  (if (empty? w)
-      #f
-      (and (list? w)
-           (<= 6 (length w))
-           (andmap (λ (el) (or (member el lowers)
-                               (member el digits)
-                               (equal? el '@)
-                               (equal? el '|.|)))
-                   w)
-           (member (first w) lowers)
-           (= (length (filter (λ (el) (equal? el '@)) w)) 1)
-           (or (equal? (take-right w 4) '(|.| e d u))
-               (equal? (take-right w 4) '(|.| n e t))
-               (equal? (take-right w 4) '(|.| c o m)))
-           (not (empty? (drop (rest (member '@ w)) 4)))
-           (not (empty? (rest (rest (member '@ (reverse w)))))))))
+  (and (list? w)
+       (not (empty? w))
+       (<= 6 (length w))
+       (andmap (λ (el) (or (member el lowers) ;;separate predicates
+                           (member el digits)
+                           (equal? el '@)
+                           (equal? el '|.|)))
+               w)
+       (member (first w) lowers)
+       (= (length (filter (λ (el) (equal? el '@)) w)) 1)
+       (or (equal? (take-right w 4) '(|.| e d u))
+           (equal? (take-right w 4) '(|.| n e t))
+           (equal? (take-right w 4) '(|.| c o m)))
+       (not (empty? (drop (rest (member '@ w)) 4)))
+       (not (empty? (rest (rest (member '@ (reverse w))))))))
 
 
 
@@ -100,27 +99,6 @@ function to generate an email address.
 (check-equal? (is-email? '(t i j a n a @ g m a i l c o m)) #f)
 (check-equal? (is-email? '(@ g m a i l |.| c o m)) #f)
 
-
-
-;; [natnum>0] → word
-;; Purpose: Generate the word of the given length
-(define (generate . n)
-  (define MAX-KS-REPS 6)
-  (define MAX-LENGTH (if (null? n) 10 (first n)))
-  (define (gen-word r . m)
-    (cond
-      [(singleton-regexp? r) (convert-singleton r)]
-      [(concat-regexp? r)
-       (let [(w1 (gen-word (concat-regexp-r1 r)))
-             (w2 (gen-word (concat-regexp-r2 r)))]
-         (append w1 w2))]
-      [(union-regexp? r) (gen-word (pick-regexp r))]
-      [(kleenestar-regexp? r)
-       (flatten (build-list
-                 (pick-reps MAX-KS-REPS)
-                 (λ (i)
-                   (gen-word (kleenestar-regexp-r1 r)))))]))
-  (gen-word email MAX-LENGTH))
 
 
 
