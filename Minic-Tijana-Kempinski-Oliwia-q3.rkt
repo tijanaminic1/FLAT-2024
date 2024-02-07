@@ -84,7 +84,7 @@ function to generate an email address. |#
 (define (is-email? w)
   (let (;; Is the element part of lowers, digist, at, or dot?
         (valid-elem?
-         (andmap (λ (el) (or (member el lowers) ;;separate predicates
+         (andmap (λ (el) (or (member el lowers)
                              (member el digits)
                              (equal? el '@)
                              (equal? el '|.|)))
@@ -125,9 +125,9 @@ function to generate an email address. |#
 
 ;.................................................
 
-(check-pred is-email? (append '(t i j a n a @ g m a i l) (gen-regexp-word com)))
-(check-pred is-email? (append '(m a r c o m @ s h u) (gen-regexp-word edu)))
-(check-pred is-email? (append '(d a r k @ o n e) (gen-regexp-word edu)))
+(check-pred is-email? (gen-regexp-word email 6))
+(check-pred is-email? (gen-regexp-word email 5))
+(check-pred is-email? (gen-regexp-word email))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
