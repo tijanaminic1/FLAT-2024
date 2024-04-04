@@ -93,7 +93,7 @@
               '(S -> aB -> aaC -> aaaS -> aaa))
 (check-equal? (grammar-derive MULT3-as '(b b a a b a b b))
               '(S -> bS -> bbS -> bbaB -> bbaaC -> bbaabC ->
-                 bbaabaS -> bbaababS -> bbaababbS ->  bbaababb))
+                  bbaabaS -> bbaababS -> bbaababbS ->  bbaababb))
 
 ;.................................................
 
@@ -150,20 +150,13 @@
          (final-nts (map (lambda (x) (first x)) final-rules))]
     (make-cfg (cons new-start nts)
               sigma
-              (remove-duplicates
-               (append
-
-                (list (list new-start ARROW (los->symbol (list start start))))
-                ;(list (list new-start ARROW (los->symbol (list start start))))
-               ; (list (list new-start ARROW start))
+              (append
                (list (list new-start ARROW EMP))
-               ;(list (list start ARROW (los->symbol (list start start))))
-               ;(map (lambda (x) (list x ARROW start)) final-nts)
-               ;(list (list 
-               rules))
+               (list (list new-start ARROW (los->symbol (list start new-start))))
+               rules)
               new-start)))
 
-(grammar-derive (cfg-ks palindrome) '(b b a b b))
+(grammar-derive (cfg-ks palindrome) '(b b a b b b a b))
 (grammar-derive (cfg-ks palindrome) '(b b a b b a b a))
 
 (grammar-derive (cfg-ks a2nb2n) '(a a b b))
@@ -173,7 +166,7 @@
 ;'(S-943750 -> SS -> aSbS -> aaSbbS -> aabbS -> aabbaSb)
 
 #;(cfg '(S-946363 S)
-     '(a b)
+       '(a b)
        (list (cfg-rule 'S-946363 '(S))
              (cfg-rule 'S-946363 '(ε))
              (cfg-rule 'S '(S-946363))
