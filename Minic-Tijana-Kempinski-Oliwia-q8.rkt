@@ -156,43 +156,23 @@
                rules)
               new-start)))
 
-(grammar-derive (cfg-ks palindrome) '(b b a b b b a b))
-(grammar-derive (cfg-ks palindrome) '(b b a b b a b a))
-
-(grammar-derive (cfg-ks a2nb2n) '(a a b b))
-(grammar-derive (cfg-ks a2nb2n) '(a a b b a a b b))
-(grammar-derive (cfg-ks a2nb2n) '(a a b b a a b b a a b b))
-
-;'(S-943750 -> SS -> aSbS -> aaSbbS -> aabbS -> aabbaSb)
-
-#;(cfg '(S-946363 S)
-       '(a b)
-       (list (cfg-rule 'S-946363 '(S))
-             (cfg-rule 'S-946363 '(ε))
-             (cfg-rule 'S '(S-946363))
-             (cfg-rule 'S '(ε))
-             (cfg-rule 'S '(a S b)))
-       'S-946363)
 
 ;; Tests for cfg-concat
-#|(define a2nb2n-numb>numa (cfg-concat a2nb2n numb>numa))
-(define MULT3-as-a2nb2n (cfg-concat MULT3-as a2nb2n))
-(check-equal? (grammar-derive a2nb2n-numb>numa  (b a))
-              "(b a) is not in L(G).")
-(check-equal? (grammar-derive a2nb2n-numb>numa  (a a a))
-              "(a a a) is not in L(G).")
-(check-equal? (grammar-derive a2nb2n-numb>numa  (a a b b))
-              "(a a b b) is not in L(G).")
-(check-equal? (last (grammar-derive a2nb2n-numb>numa  (b b b)))  bbb)
-(check-equal? (last (grammar-derive a2nb2n-numb>numa  (a b b)))  abb)
-(check-equal? (last (grammar-derive a2nb2n-numb>numa  (a a b b b b b)))
-              aabbbbb)
-(check-equal? (grammar-derive MULT3-as-a2nb2n  (a a))
-              "(a a) is not in L(G).")
-(check-equal? (grammar-derive MULT3-as-a2nb2n  (b b b b a))
-              "(b b b b a) is not in L(G).")
-(check-equal? (last (grammar-derive MULT3-as-a2nb2n  (a a b b)))  aabb)
-(check-equal? (last (grammar-derive MULT3-as-a2nb2n  (b b b b b b)))  bbbbbb)|#
+(check-equal? (last (grammar-derive palindrome  '(b b a b b b a b)))  
+              'bbabbbab)
+(check-equal? (last (grammar-derive (cfg-ks palindrome) '(b b a b b a b a)))  
+              'bbabbaba)
+(check-equal? (last (grammar-derive (cfg-ks a2nb2n) '(a a b b)))  
+              'aabb)
+(check-equal? (last (grammar-derive (cfg-ks a2nb2n) '(a a b b a a b b)))  
+              'aabbaabb)
+(check-equal? (last (grammar-derive (cfg-ks a2nb2n) '(a a b b a a b b a a b b)))  
+              'aabbaabbaabb)
+(check-equal? (grammar-derive (cfg-ks palindrome) '(a b b b b)) "(a b b b b) is not in L(G).")
+(check-equal? (grammar-derive (cfg-ks a2nb2n) '(a b b b b)) "(a b b b b) is not in L(G).")
+
+
+
 
 
 
