@@ -157,7 +157,7 @@
               new-start)))
 
 
-;; Tests for cfg-concat
+;; Tests for cfg-ks
 (check-equal? (last (grammar-derive palindrome  '(b b a b b b a b)))  
               'bbabbbab)
 (check-equal? (last (grammar-derive (cfg-ks palindrome) '(b b a b b a b a)))  
@@ -174,7 +174,7 @@
               'babba)
 (check-equal? (last (grammar-derive MULT3-as '(a a a)))
               'aaa)
-(check-equal? (last (grammar-derive MULT3-as '(a a a a a a)))
+(check-equal? (last (grammar-derive (cfg-ks MULT3-as) '(a a a a a a)))
               'aaaaaa)   
 (check-equal? (grammar-derive (cfg-ks palindrome) '(a b b b b))
               "(a b b b b) is not in L(G).")
