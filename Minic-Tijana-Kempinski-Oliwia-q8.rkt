@@ -168,29 +168,41 @@
               'aabbaabb)
 (check-equal? (last (grammar-derive (cfg-ks a2nb2n) '(a a b b a a b b a a b b)))  
               'aabbaabbaabb)
-(check-equal? (grammar-derive (cfg-ks palindrome) '(a b b b b)) "(a b b b b) is not in L(G).")
-(check-equal? (grammar-derive (cfg-ks a2nb2n) '(a b b b b)) "(a b b b b) is not in L(G).")
+(check-equal? (last (grammar-derive numb>numa '(b a b b a)))
+              'babba)
+(check-equal? (last (grammar-derive (cfg-ks numb>numa) '(b a b b a)))
+              'babba)
+(check-equal? (last (grammar-derive MULT3-as '(a a a)))
+              'aaa)
+(check-equal? (last (grammar-derive MULT3-as '(a a a a a a)))
+              'aaaaaa)   
+(check-equal? (grammar-derive (cfg-ks palindrome) '(a b b b b))
+              "(a b b b b) is not in L(G).")
+(check-equal? (grammar-derive (cfg-ks a2nb2n) '(a b b b b))
+              "(a b b b b) is not in L(G).")
+(check-equal? (grammar-derive (cfg-ks numb>numa) '(a b a))
+              "(a b a) is not in L(G).")
+(check-equal? (grammar-derive (cfg-ks MULT3-as) '(b b a b a b a a b))
+              "(b b a b a b a a b) is not in L(G).")
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+#| Prove:
 
+Context-free languages are closed under Kleene star,
+by showing that L* = L((cfg-ks G)), where L is an arbitrary context-free language
+such that L = L(G).
 
+Assume S ->G w. By construction of G, the derivation of w starts with (grammar-start G),
+and then either empty is generated, or (grammar-start G1) and (grammar-start G).
+If empty is generated then the empty word is generated, which simulates the characteristic of
+Kleene star that says there can be 0 generations of a word in L*.
+If (grammar-start G1) and (grammar-start G) are generated, then G simulates G1 and another G
+simulates another possible Kleene star iteration.
 
+G1 generates w, and G generates either empty or G1 and G, which means (by transitivity)
+that w can be generated any number of times (including 0 times).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Thus, L* = L((cfg-ks G)). |#
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
