@@ -143,11 +143,11 @@
 ;; Q: push state
 ;; R: pop state
 
-(define new-anbn (make-mttm `(S M F Q R Y)
+(define new-anbn (make-mttm '(S M F Q R Y)
                             '(a b)
                             'S
                             '(Y)
-                            `(((S (a _)) (Q (a R)))
+                            '(((S (a _)) (Q (a R)))
                               ((S (a a)) (Q (a R)))
                               ((S (a b)) (Q (a R)))
                               ((Q (a _)) (M (R a)))
@@ -168,10 +168,71 @@
 (sm-showtransitions new-anbn '(a a b b))
 ;(sm-visualize new-anbn)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; pda -> mttm
+;; Purpose: Given a pda, make an mttm
+(define (pda->mttm p)
 
+  ;; pda-rule -> boolean
+  ;; Purpose: Given a rule, determine if read is not empty
+  (define (read? r)
+    (not (eq? EMP (second (first r)))))
+  ;; pda-rule -> boolean
+  ;; Purpose: Given a rule, determine if pop is not empty
+  (define (pop? r)
+    (not (eq? EMP (third (first r)))))
+  ;; pda-rule -> boolean
+  ;; Purpose: Given a rule, determine if push is not empty
+  (define (push? r)
+    (not (eq? EMP (second (second r)))))
 
+  ;; pda-rule -> (listof mttm-rule)
+  ;; Purpose: Make mttm rules for a pda rule that only reads something
+  (define (new-read-rules rule)
+    (let ((fromst (first (first rule)))
+          (tost (first (second rule)))
+          (read (second (first rule)))
+          (sigma (cons BLANK (sm-sigma p))))
+    (map (lambda (x) `((,fromst (,read ,x)) (,tost (R ,x)))) sigma)))
+  
+  ;; (listof pda-rule) -> (listof mttm-rule)
+  ;; Purpose: Convert pda rules to mttm rules
+  ;; Accumulator invariants:
+  ;;  states = keeps track of which states have already been generated
+  (define (new-rules-helper rules states)
+    (if (empty? rules)
+        '()
+        (let ((rule (first rules)))
+          (cond ((and (read? rule)
+                      (pop? rule)
+                      (push? rule)) '())
+                ((and (read? rule)
+                      (pop? rule)) '())
+                ((and (read? rule)
+                      (push? rule)) '())
+                ((and (pop? rule)
+                      (push? rule)) '())
+                ((read? rule) (append (new-read-rules rule)
+                                      (new-rules-helper (rest rules) states)))
+                ((pop? rule) '())
+                ((push? rule) '())
+                (else '())))))
 
+  (let* ((new-rules (new-rules-helper (sm-rules p) (sm-states p)))
+         (new-states (remove-duplicates
+                      (append (map (lambda (x) (first (first x))) new-rules)
+                              (map (lambda (x) (first (second x))) new-rules))))
+         (new-final (gen-nt new-states)))
+    (make-mttm new-states
+               (sm-sigma p)
+               (sm-start p)
+               (list new-final)
+               new-rules
+               2
+               new-final)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
