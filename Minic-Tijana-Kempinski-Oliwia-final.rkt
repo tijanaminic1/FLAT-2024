@@ -219,7 +219,8 @@
                 ((push? rule) '())
                 (else '())))))
 
-  (let* ((new-rules (new-rules-helper (sm-rules p) (sm-states p)))
+   (new-rules-helper (sm-rules p) (sm-states p))
+  #;(let* ((new-rules (new-rules-helper (sm-rules p) (sm-states p)))
          (new-states (remove-duplicates
                       (append (map (lambda (x) (first (first x))) new-rules)
                               (map (lambda (x) (first (second x))) new-rules))))
