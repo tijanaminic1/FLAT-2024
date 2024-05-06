@@ -143,6 +143,24 @@
 ;; Q: push state
 ;; R: pop state
 
+#;(define new-anbn (make-mttm '(S M F Q R Y)
+                              '(a b)
+                              'S
+                              '(Y)
+                              '(((S (a _)) (Q (a R)))
+                                ((S (a a)) (Q (a R)))
+                                ((S (a b)) (Q (a R)))
+                                ((Q (a _)) (M (R a)))
+                                ((Q (a _)) (S (R a)))
+      
+                                ((M (b a)) (R (b _)))
+                                ((R (b _)) (F (R L)))
+                                ((R (b _)) (M (R L)))
+
+                                ((F (_ _)) (Y (_ _))))
+                              2
+                              'Y))
+
 (define new-anbn (make-mttm '(S M F Q R Y)
                             '(a b)
                             'S
@@ -150,14 +168,36 @@
                             '(((S (a _)) (Q (a R)))
                               ((S (a a)) (Q (a R)))
                               ((S (a b)) (Q (a R)))
-                              ((Q (a _)) (M (R a)))
+                              ;((Q (a _)) (M (R a)))
                               ((Q (a _)) (S (R a)))
+
+                              ((S (a a)) (M (a a)))
+                              ((S (b b)) (M (b b)))
+                              ((S (_ _)) (M (_ _)))
+                              ((S (a b)) (M (a b)))
+                              ((S (b a)) (M (b a)))
+                              ((S (a _)) (M (a _)))
+                              ((S (_ a)) (M (_ a)))
+                              ((S (b _)) (M (b _)))
+                              ((S (_ b)) (M (_ b)))
+                              
       
                               ((M (b a)) (R (b _)))
-                              ((R (b _)) (F (R L)))
+                              ;((R (b _)) (F (R L)))
+
+                              ((M (a a)) (F (a a)))
+                              ((M (b b)) (F (b b)))
+                              ((M (_ _)) (F (_ _)))
+                              ((M (a b)) (F (a b)))
+                              ((M (b a)) (F (b a)))
+                              ((M (a _)) (F (a _)))
+                              ((M (_ a)) (F (_ a)))
+                              ((M (b _)) (F (b _)))
+                              ((M (_ b)) (F (_ b)))
+                              
                               ((R (b _)) (M (R L)))
 
-                             ((F (_ _)) (Y (_ _))))
+                              ((F (_ _)) (Y (_ _))))
                             2
                             'Y))
 
@@ -187,6 +227,13 @@
   (define (push? r)
     (not (eq? EMP (second (second r)))))
 
+  ;; (listof mttm-rule) -> (listof state)
+  ;; Purpose: Get all lists from mttm-rules 
+  (define (get-states-from-mttm-rules r)
+    (remove-duplicates
+     (append (map (lambda (x) (first (first x))) r)
+             (map (lambda (x) (first (second x))) r))))
+
   ;; pda-rule -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that only reads something
   (define (new-read-rules rule)
@@ -194,7 +241,42 @@
           (tost (first (second rule)))
           (read (second (first rule)))
           (sigma (cons BLANK (sm-sigma p))))
-    (map (lambda (x) `((,fromst (,read ,x)) (,tost (R ,x)))) sigma)))
+      (map (lambda (x) `((,fromst (,read ,x)) (,tost (R ,x)))) sigma)))
+
+  ;; pda-rule -> (listof mttm-rule)
+  ;; Purpose: Make mttm rules for a pda rule that only pops something
+  (define (new-pop-rules rule stateacc)
+    (let ((fromst (first (first rule)))
+          (tost (first (second rule)))
+          (pop (third (first rule)))
+          (sigma (cons BLANK (sm-sigma p))))
+      ;; poplist -> (listof mttm-rule)
+      ;; Purpose: Traverse the pop list
+      ;; Accumulator invariants:
+      ;;  stateacc2 = keep track of which states have already been generated
+      (define (new-read-rules-helper p new-fromst stateacc2)
+        (cond ((= 1 (length p))
+               (let* ((newst (gen-state stateacc2))
+                      (new-acc (cons newst stateacc2)))
+                 (append (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK ,BLANK))))
+                         (list `((,newst (,BLANK ,BLANK)) (,tost (R L)))))))
+              (else
+               (let* ((newst (gen-state stateacc2))
+                      (new-acc (cons newst stateacc2)))
+                 (append (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK ,BLANK))))
+                         (list `((,newst (,BLANK ,BLANK)) (,newst (R L))))
+                         (new-read-rules-helper (cdr p) newst new-acc))))))             
+      (new-read-rules-helper pop fromst stateacc)))
+
+  ;; pda-rule -> (listof mttm-rule)
+  ;; Purpose: Make mttm rules for a pda rule that reads, pops, and pushes nothing
+  (define (new-empty-rules rule)
+    (let* ((fromst (first (first rule)))
+           (tost (first (second rule)))
+           (sigma (cons BLANK (sm-sigma p)))
+           (new-reads-actions (append (map (lambda (x) (list x x)) sigma)
+                                      (append-map permutations (filter (lambda (x) (= 2 (length x))) (combinations sigma))))))
+      (map (lambda (x) `((,fromst ,x) (,tost ,x))) new-reads-actions)))
   
   ;; (listof pda-rule) -> (listof mttm-rule)
   ;; Purpose: Convert pda rules to mttm rules
@@ -215,30 +297,35 @@
                       (push? rule)) '())
                 ((read? rule) (append (new-read-rules rule)
                                       (new-rules-helper (rest rules) states)))
-                ((pop? rule) '())
+                ((pop? rule)
+                 (let* ((new-rules (new-pop-rules rule))
+                        (new-states (remove-duplicates
+                                     (append (get-states-from-mttm-rules new-rules)
+                                             states))))
+                   (append new-rules
+                           (new-rules-helper (rest rules) new-states)))) 
                 ((push? rule) '())
-                (else '())))))
-
-   (new-rules-helper (sm-rules p) (sm-states p))
+                (else (append (new-empty-rules rule)
+                              (new-rules-helper (rest rules) states)))))))
+  (displayln (new-pop-rules '((Q ε (a b a)) (S ε)) '(A C F G)))
+  (new-rules-helper (sm-rules p) (sm-states p))
   #;(let* ((new-rules (new-rules-helper (sm-rules p) (sm-states p)))
-         (new-states (remove-duplicates
-                      (append (map (lambda (x) (first (first x))) new-rules)
-                              (map (lambda (x) (first (second x))) new-rules))))
-         (new-final (gen-nt new-states)))
-    (make-mttm new-states
-               (sm-sigma p)
-               (sm-start p)
-               (list new-final)
-               new-rules
-               2
-               new-final)))
+           (new-states (get-states-from-mttm-rules new-rules))
+           (new-final (gen-nt new-states)))
+      (make-mttm new-states
+                 (sm-sigma p)
+                 (sm-start p)
+                 (list new-final)
+                 new-rules
+                 2
+                 new-final)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+;(append-map permutations (filter (lambda (x) (= 2 (length x))) (combinations '(_ a b))))
 
-
-
+(pda->mttm a^nb^n)
 
 
 
