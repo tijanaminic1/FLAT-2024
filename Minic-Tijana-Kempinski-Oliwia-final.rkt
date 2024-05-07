@@ -243,7 +243,7 @@
           (tost (first (second rule)))
           (read (second (first rule)))
           (pop (third (first rule)))
-          (push (second (second rule)))
+          (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
       ;; pushlist -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
@@ -317,7 +317,7 @@
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))
           (read (second (first rule)))
-          (push (second (second rule)))
+          (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
       ;; pushlist -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
@@ -343,8 +343,11 @@
   (define (new-pop-push-rules rule stateacc)
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))
+          (read (if (eq? EMP (second (first rule)))
+                    BLANK
+                    (second (first rule))))
           (pop (third (first rule)))
-          (push (second (second rule)))
+          (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
       ;; pushlist -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
@@ -352,12 +355,12 @@
       ;;  stateacc2 = keep track of which states have already been generated
       (define (push-helper p new-fromst stateacc2)
         (cond ((= 1 (length p))
-               (list `((,new-fromst (,BLANK ,BLANK)) (,tost (,BLANK ,(car p))))))
+               (list `((,new-fromst (,read ,BLANK)) (,tost (,read ,(car p))))))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,BLANK ,BLANK)) (,new-fromst (,BLANK ,(car p)))))
-                         (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK R))))
+                 (append (list `((,new-fromst (,read ,BLANK)) (,new-fromst (,read ,(car p)))))
+                         (list `((,new-fromst (,read ,(car p))) (,newst (,read R))))
                          (push-helper (cdr p) newst new-acc))))))
       ;; poplist -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
@@ -371,15 +374,15 @@
                       (new-acc2 (cons newst2 new-acc))
                       (newst3 (gen-state new-acc2))
                       (new-acc3 (cons newst3 new-acc2)))
-                 (append (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK ,BLANK))))
-                         (list `((,newst (,BLANK ,BLANK)) (,newst2 (,BLANK L))))
-                         (append-map (lambda (x) (list `((,newst2 (,BLANK ,x)) (,newst3 (,BLANK R))))) sigma)
+                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
+                         (list `((,newst (,read ,BLANK)) (,newst2 (,read L))))
+                         (append-map (lambda (x) (list `((,newst2 (,read ,x)) (,newst3 (,read R))))) sigma)
                          (push-helper push newst3 new-acc3))))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK ,BLANK))))
-                         (list `((,newst (,BLANK ,BLANK)) (,newst (,BLANK L))))
+                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
+                         (list `((,newst (,read ,BLANK)) (,newst (,read L))))
                          (new-pop-push-rules-helper (cdr p) newst new-acc)))))) 
       (new-pop-push-rules-helper pop fromst stateacc)))
   
@@ -399,6 +402,9 @@
   (define (new-pop-rules rule stateacc)
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))
+          (read (if (eq? EMP (second (first rule)))
+                    BLANK
+                    (second (first rule))))
           (pop (third (first rule))))
       ;; poplist -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
@@ -408,13 +414,13 @@
         (cond ((= 1 (length p))
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK ,BLANK))))
-                         (list `((,newst (,BLANK ,BLANK)) (,tost (,BLANK L)))))))
+                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
+                         (list `((,newst (,read ,BLANK)) (,tost (,read L)))))))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK ,BLANK))))
-                         (list `((,newst (,BLANK ,BLANK)) (,newst (,BLANK L))))
+                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
+                         (list `((,newst (,read ,BLANK)) (,newst (,read L))))
                          (new-pop-rules-helper (cdr p) newst new-acc))))))             
       (new-pop-rules-helper pop fromst stateacc)))
 
@@ -425,7 +431,10 @@
   (define (new-push-rules rule stateacc)
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))
-          (push (second (second rule)))
+          (read (if (eq? EMP (second (first rule)))
+                    BLANK
+                    (second (first rule))))
+          (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
       ;; pushlist -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
@@ -433,15 +442,15 @@
       ;;  stateacc2 = keep track of which states have already been generated
       (define (new-push-rules-helper p new-fromst stateacc2)
         (cond ((= 1 (length p))
-               (list `((,new-fromst (,BLANK ,BLANK)) (,tost (,BLANK ,(car p))))))
+               (list `((,new-fromst (,read ,BLANK)) (,tost (,read ,(car p))))))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,BLANK ,BLANK)) (,new-fromst (,BLANK ,(car p)))))
-                         (list `((,new-fromst (,BLANK ,(car p))) (,newst (,BLANK R))))
+                 (append (list `((,new-fromst (,read ,BLANK)) (,new-fromst (,read ,(car p)))))
+                         (list `((,new-fromst (,read ,(car p))) (,newst (,read R))))
                          (new-push-rules-helper (cdr p) newst new-acc))))))
       (let ((newst (gen-state stateacc)))
-        (append (append-map (lambda (x) (list `((,fromst (,BLANK ,x)) (,newst (,BLANK R))))) sigma)
+        (append (append-map (lambda (x) (list `((,fromst (,read ,x)) (,newst (,read R))))) sigma)
                 (new-push-rules-helper push newst (cons newst stateacc))))))
   
   ;; pda-rule -> (listof mttm-rule)
@@ -535,8 +544,8 @@
 (sm-graph a^nb^n)
 (sm-graph (pda->mttm a^nb^n))
 
-
-
+(sm-graph a^ib^j)
+(sm-graph (pda->mttm a^ib^j))
 
 
 
