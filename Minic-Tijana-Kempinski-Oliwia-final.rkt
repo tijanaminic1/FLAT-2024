@@ -208,6 +208,16 @@
 (sm-showtransitions new-anbn '(a a b b))
 ;(sm-visualize new-anbn)
 
+(define anbn (make-ndpda '(S M F)
+                           '(a b)
+                           '(a c b)
+                           'S
+                           '(F)
+                           '(((S ε ε) (M ε))
+                             ((S a ε) (S (a)))
+                             ((M a (b)) (M (c)))
+                             ((M ε ε) (F ε)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; pda -> mttm
@@ -514,7 +524,7 @@
                    (append new-rules
                            (new-rules-helper (rest rules) new-states)))) 
                 ((push? rule)
-                 (let* ((new-rules (new-push-rules rule))
+                 (let* ((new-rules (new-push-rules rule states))
                         (new-states (remove-duplicates
                                      (append (get-states-from-mttm-rules new-rules)
                                              states))))
@@ -529,7 +539,7 @@
          (new-final (gen-nt new-states))
          (new-rules2 (append (append-map (lambda (x) (list `((,x (,BLANK ,BLANK)) (,new-final (,BLANK ,BLANK))))) (sm-finals p)) new-rules)))
       (make-mttm (cons new-final new-states)
-                 (sm-sigma p)
+                 (remove-duplicates (append (sm-sigma p) (sm-gamma p)))
                  (sm-start p)
                  (list new-final)
                  new-rules2
@@ -547,18 +557,169 @@
 (sm-graph a^ib^j)
 (sm-graph (pda->mttm a^ib^j))
 
+(sm-graph anbn)
+(sm-graph (pda->mttm anbn))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+#| Proof of Equivalence
 
+To prove that the languages of the two machines are the same, we first need to
+prove that every computation possible with PDA may be carried out by MTTM.
+To this end, we prove the following theorem by induction on |w|.
 
+Let P = (make-ndpda K sig gam s F del). There exists a mttm P' that simulates P.
+Let P' = (make-mttm K' sig' s F' del' a n), such that:
+  K': K and
+      new states needed for popping and pushing and
+      a
+sig': sig and
+      gam
+  F': (list a)
+   a: new accept state
+del': transitions simulating transitions in del and
+      transitions reading and writing blanks on all tapes from all states in F to a
+   n: 2 (tape 0 simulates w and tape 1 simulates the stack)
 
+Assume the precondition for P' is:
+tape 0 = (LM w) and t0h = 1
+tape 1 = (BLANK) and t1h = 0
 
+If a blank is read on tape 0, that means that all the input is consumed.
+If the head on tape 1 is on the blank at position 0, that means the stack is empty. 
 
+Assume the states of P are states in P'.
+Prove that P' makes the same state transitions as P.
 
+There are 8 cases for possible transitions in P:
 
+1. Transition that reads, pops, and pushes something.
+2. Transition that reads and pops something, but pushes nothing.
+3. Transition that reads and pushes something, but pops nothing.
+4. Transition that pops and pushes something, but reads nothing.
+5. Transition that reads something, but pops and pushes nothing.
+6. Transition that pops something, but reads and pushes nothing.
+7. Transition that pushes something, but reads and pops nothing.
+8. Transition that reads, pops, and pushes nothing.
 
+We need to prove that P' can simulate all 8 of these transition types.
 
+Let src = source state of a transition in P
+Let dst = destination state of a transition in P
+Let ui = unconsumed input
 
+1. Assume a rule in P reads, pops, and pushes something. That means that the machine transitions from
+a src to a dst reading the next element of the ui and changing the stack (by popping the pop elements and then pushing the push elements).
+For P' to transition from the same src to the same dst, the machine starts in src, then transitions through a newly
+created state for every element popped, then transitions through a newly created state for every element pushed, and ends in dst.
+The transition from src to the first newly created state reads the element on tape 0 and writes it (it is not consumed until everything is popped and pushed).
+This same transition also reads the element on tape 1 and if it is the first element of the pop list it writes a blank. Then, in that newly
+created state, it reads the blank and moves the head on tape 1 left (simulating the new top of the stack). This is repeated for all elements in the pop list.
+After popping the last element of the list (writing a blank on tape 1), P' transitions to some new state A and moves the head on tape 1
+left. Like this, the next element in ui (tape 0) has been consumed and the elements from the pop list were removed from the stack (tape 1).
+A is the last state of the pop sequence and the first state of the push sequence. Before using the list of push elements, we reverse it to push
+the start of the list first. The transition from A to the first newly created state of the push sequence reads the element on tape 0 and writes it.
+This same transition also reads the element on tape 1 and moves the head on tape 1 right to a blank. Then, in that newly created state, it reads the blank and
+writes the first push element. This is repeated for all elements in the push list. When pushing the last element of the list (writing it
+on tape 1), P' transitions to dst and moves the head on tape 0 right (consuming the next element in ui). Like this, the next element in ui (tape 0) has been consumed
+and the pop elements have been removed from the stack (tape 1) and the stack was added the elements from the push list. Thus, the rule in P and the
+new transitions in P' are equivalent.
+
+2. Assume a rule in P reads and pops something, but pushes nothing. That means that the machine transitions from
+a src to a dst reading the next element of the ui and changing the stack (by popping the pop elements).
+For P' to transition from the same src to the same dst, the machine starts in src, then transitions through a newly
+created state for every element popped, and ends in dst. The transition from src to the first newly created state
+reads the element on tape 0 and writes it (it is not consumed until everything is popped). This same transition also reads the element on tape 1
+and if it is the first element of the pop list it writes a blank. Then, in that newly created state, it reads the blank
+and moves the head on tape 1 left (simulating the new top of the stack). This is repeated for all elements in the pop list.
+After popping the last element of the list (writing a blank on tape 1), P' transitions to dst, moves the head on tape 0 right (consuming the next element of ui)
+and moves the head on tape 1 left (simulating the head being on the top of the stack). Like this, the next element in ui (tape 0) has been consumed and the elements
+from the pop list were removed from the stack (tape 1). Thus, the rule in P and the new transitions in P' are equivalent.
+
+3. Assume a rule in P reads and pushes something, but pops nothing. That means that the machine transitions from
+a src to a dst reading the next element of the ui and changing the stack (by adding new push elements).
+For P' to transition from the same src to the same dst, the machine starts in src, then transitions through a newly
+created state for every element pushed, and ends in dst. Before using the list of push elements, we reverse it to
+push the start of the list first. The transition from src to the first newly created state
+reads the element on tape 0 and writes it (it is not consumed until everything is pushed). This same transition also reads the element on tape 1
+and moves the head on tape 1 right to a blank. Then, in that newly created state, it reads the blank and writes the first
+push element. This is repeated for all elements in the push list. When pushing the last element of the list (writing it
+on tape 1), P' transitions to dst, and moves the head on tape 0 right (consuming the next element of ui). Like this, the next element in ui (tape 0) has been
+consumed and the stack (tape 1) was added the elements from the push list. Thus, the rule in P and the new transitions in P' are equivalent.
+
+4. Assume a rule in P pops, and pushes something, but reads nothing. That means that the machine transitions from
+a src to a dst not changing the ui and changing the stack (by popping the pop elements and then pushing the push elements).
+For P' to transition from the same src to the same dst, the machine starts in src, then transitions through a newly
+created state for every element popped, then transitions through a newly created state for every element pushed, and ends in dst.
+The transition from src to the first newly created state reads the element on tape 0 and writes it (nothing is consumed).
+This same transition also reads the element on tape 1 and if it is the first element of the pop list it writes a blank. Then, in that newly
+created state, it reads the blank and moves the head on tape 1 left (simulating the new top of the stack). This is repeated for all elements in the pop list.
+After popping the last element of the list (writing a blank on tape 1), P' transitions to some new state A and moves the head on tape 1
+left. Like this, the next element in ui (tape 0) has been consumed and the elements from the pop list were removed from the stack (tape 1).
+A is the last state of the pop sequence and the first state of the push sequence. Before using the list of push elements, we reverse it to push
+the start of the list first. The transition from A to the first newly created state of the push sequence reads the element on tape 0 and writes it.
+This same transition also reads the element on tape 1 and moves the head on tape 1 right to a blank. Then, in that newly created state, it reads the blank and
+writes the first push element. This is repeated for all elements in the push list. When pushing the last element of the list (writing it
+on tape 1), P' transitions to dst. Like this, ui (tape 0) remains unchanged and the pop elements have been removed from the stack (tape 1)
+and the stack was added the elements from the push list. Thus, the rule in P and the new transitions in P' are equivalent.
+
+5. Assume a rule in P reads something, but pushes and pops nothing. That means that the machine transitions from
+a src to a dst reading the next element of ui and not changing the stack.
+P' also transitions from the same src to the same dst. The transition reads P's read element on tape 0 and moves the
+head on tape 0 to the right. The transition also reads the current element on tape 1 and writes it. Like this the stack
+remains unchanged, and the next element in ui has been consumed. Thus, the rule in P and the new transitions in P' are equivalent.
+
+6. Assume a rule in P pops something, but reads and pushes nothing. That means that the machine transitions from
+a src to a dst without changing the ui and changing the stack (by popping the pop elements).
+For P' to transition from the same src to the same dst, the machine starts in src, then transitions through a newly
+created state for every element popped, and ends in dst. The transition from src to the first newly created state
+reads the element on tape 0 and writes it (ui remains the same). This same transition also reads the element on tape 1
+and if it is the first element of the pop list it writes a blank. Then, in that newly created state, it reads the blank
+and moves the head on tape 1 left (simulating the new top of the stack). This is repeated for all elements in the pop list.
+After popping the last element of the list (writing a blank on tape 1), P' transitions to dst and moves the head on tape 1
+left. Like this, ui (tape 0) remains the same and the elements from the pop list were removed from the stack (tape 1). Thus, the
+rule in P and the new transitions in P' are equivalent.
+
+7. Assume a rule in P pushes something, but reads and pops nothing. That means that the machine transitions from
+a src to a dst without changing the ui and changing the stack (by adding new push elements).
+For P' to transition from the same src to the same dst, the machine starts in src, then transitions through a newly
+created state for every element pushed, and ends in dst. Before using the list of push elements, we reverse it to
+push the start of the list first. The transition from src to the first newly created state
+reads the element on tape 0 and writes it (ui remains the same). This same transition also reads the element on tape 1
+and moves the head on tape 1 right to a blank. Then, in that newly created state, it reads the blank and writes the first
+push element. This is repeated for all elements in the push list. When pushing the last element of the list (writing it
+on tape 1), P' transitions to dst. Like this, ui (tape 0) remains the same and the stack (tape 1) was added the elements
+from the push list. Thus, the rule in P and the new transitions in P' are equivalent.
+
+8. Assume a rule in P reads, pops, and pushes nothing. That means that the machine transitions from a src
+to a dst without changing ui or stack.
+P' transitions from the same src to the same dst by reading the elements on its 2
+tapes, and writing the same elements. Like this, both tapes remain unchanged, which is equivalent to not changing
+ui or stack. Thus, the rule in P and the new transitions in P' are equivalent.
+
+Proving L(P) = L(P')
+
+w∈L(P) <-> w∈L(P')
+
+(->) Assume w∈L(P).
+Given that transition equivalences always hold, there is a computation that has P' consume w, meaning that the head ends on tape 0 on the blank after w,
+and with the head on tape 1 being at position 0 on a blank (simulating an empty stack), and reach a, its accept state. Therefore, w∈L(P').
+
+(<-) Assume w∈L(P').
+Given that transition equivalences always hold, there is a computation that has P consume w
+and reach a state in F with an empty stack. Therefore, w∈L(P).
+
+w∈/L(P) <-> w∈/L(P')
+
+(->) Assume w∈L(P).
+Given that transition equivalences always hold, there is no computation that has P' consume w, meaning that the head ends on tape 0 on the blank after w,
+and with the head on tape 1 being at position 0 on a blank (simulating an empty stack), and reach a, its accept state. Therefore, w∈/L(P').
+
+(<-) Assume w∈L(P').
+Given that transition equivalences always hold, there is no computation that has P consume w
+and reach a state in F with an empty stack. Therefore, w∈/L(P). |#
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
