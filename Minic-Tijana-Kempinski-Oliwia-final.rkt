@@ -172,8 +172,8 @@
      (append (map (lambda (x) (first (first x))) r)
              (map (lambda (x) (first (second x))) r))))
 
-  ;; pda-rule -> (listof mttm-rule)
-  ;; Purpose: Make mttm rules for a pda rule that only pops and pushes something
+  ;; pda-rule (listof state) -> (listof mttm-rule)
+  ;; Purpose: Make mttm rules for a pda rule that reads, pops and pushes something
   ;; Accumulator invariants:
   ;;  stateacc = keep track of which states have already been generated
   (define (new-read-pop-push-rules rule stateacc)
@@ -183,7 +183,7 @@
           (pop (third (first rule)))
           (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
-      ;; pushlist -> (listof mttm-rule)
+      ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
@@ -193,10 +193,12 @@
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,read ,BLANK)) (,new-fromst (,read ,(car p)))))
-                         (list `((,new-fromst (,read ,(car p))) (,newst (,read R))))
+                 (append (list `((,new-fromst (,read ,BLANK))
+                                 (,new-fromst (,read ,(car p)))))
+                         (list `((,new-fromst (,read ,(car p)))
+                                 (,newst (,read R))))
                          (push-helper (cdr p) newst new-acc))))))
-      ;; poplist -> (listof mttm-rule)
+      ;; poplist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
@@ -222,7 +224,7 @@
                          (new-read-pop-push-rules-helper (cdr p) newst2 new-acc2)))))) 
       (new-read-pop-push-rules-helper pop fromst stateacc)))
   
-  ;; pda-rule -> (listof mttm-rule)
+  ;; pda-rule (listof state) -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that reads and pops something
   ;; Accumulator invariants:
   ;;  stateacc = keep track of which states have already been generated
@@ -231,7 +233,7 @@
           (tost (first (second rule)))
           (read (second (first rule)))
           (pop (third (first rule))))
-      ;; poplist -> (listof mttm-rule)
+      ;; poplist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
@@ -251,7 +253,7 @@
                          (new-read-pop-rules-helper (cdr p) newst2 new-acc2))))))             
       (new-read-pop-rules-helper pop fromst stateacc)))
 
-  ;; pda-rule -> (listof mttm-rule)
+  ;; pda-rule (listof state) -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that reads and pushes something
   ;; Accumulator invariants:
   ;;  stateacc = keep track of which states have already been generated
@@ -261,7 +263,7 @@
           (read (second (first rule)))
           (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
-      ;; pushlist -> (listof mttm-rule)
+      ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
@@ -278,7 +280,7 @@
         (append (append-map (lambda (x) (list `((,fromst (,read ,x)) (,newst (,read R))))) sigma)
                 (new-read-push-rules-helper push newst (cons newst stateacc))))))
 
-  ;; pda-rule -> (listof mttm-rule)
+  ;; pda-rule (listof state) -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that only pops and pushes something
   ;; Accumulator invariants:
   ;;  stateacc = keep track of which states have already been generated
@@ -291,20 +293,23 @@
           (pop (third (first rule)))
           (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
-      ;; pushlist -> (listof mttm-rule)
+      ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
       (define (push-helper p new-fromst stateacc2)
         (cond ((= 1 (length p))
-               (append-map (lambda (x) (list `((,new-fromst (,x ,BLANK)) (,tost (,x ,(car p)))))) sigma))
+               (append-map
+                (lambda (x) (list `((,new-fromst (,x ,BLANK)) (,tost (,x ,(car p)))))) sigma))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,BLANK)) (,new-fromst (,x ,(car p)))))
-                                                         (list `((,new-fromst (,x ,(car p))) (,newst (,x R)))))) sigma)
+                 (append (append-map
+                          (lambda (x)
+                            (append (list `((,new-fromst (,x ,BLANK)) (,new-fromst (,x ,(car p)))))
+                                    (list `((,new-fromst (,x ,(car p))) (,newst (,x R)))))) sigma)
                          (push-helper (cdr p) newst new-acc))))))
-      ;; poplist -> (listof mttm-rule)
+      ;; poplist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
@@ -316,17 +321,18 @@
                       (new-acc2 (cons newst2 new-acc))
                       (newst3 (gen-state new-acc2))
                       (new-acc3 (cons newst3 new-acc2)))
-                 (append (append-map (lambda (y) (append (list `((,new-fromst (,y ,(car p))) (,newst (,y ,BLANK))))
-                                                         (list `((,newst (,y ,BLANK)) (,newst2 (,y L)))) 
-                                                         (append-map (lambda (x) (list `((,newst2 (,y ,x)) (,newst3 (,y R))))) sigma))) sigma)
+                 (append (append-map
+                          (lambda (y)
+                            (append (list `((,new-fromst (,y ,(car p))) (,newst (,y ,BLANK))))
+                                    (list `((,newst (,y ,BLANK)) (,newst2 (,y L)))) 
+                                    (append-map (lambda (x) (list `((,newst2 (,y ,x)) (,newst3 (,y R))))) sigma))) sigma)
                          (push-helper push newst3 new-acc3))))
               (else
-               (let* ((newst (gen-state stateacc2))
-                      (new-acc (cons newst stateacc2))
-                      (newst2 (gen-state new-acc))
-                      (new-acc2 (cons newst2 new-acc)))
-                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
-                                                         (list `((,newst (,x ,BLANK)) (,newst2 (,x L)))))) sigma)
+               (let* ((newst (gen-state stateacc2)) (new-acc (cons newst stateacc2))
+                      (newst2 (gen-state new-acc)) (new-acc2 (cons newst2 new-acc)))
+                 (append (append-map (lambda (x)
+                                       (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
+                                               (list `((,newst (,x ,BLANK)) (,newst2 (,x L)))))) sigma)
                          (new-pop-push-rules-helper (cdr p) newst2 new-acc2)))))) 
       (new-pop-push-rules-helper pop fromst stateacc)))
   
@@ -339,19 +345,16 @@
           (sigma (cons BLANK (sm-sigma p))))
       (map (lambda (x) `((,fromst (,read ,x)) (,tost (R ,x)))) sigma)))
 
-  ;; pda-rule -> (listof mttm-rule)
+  ;; pda-rule (listof state) -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that only pops something
   ;; Accumulator invariants:
   ;;  stateacc = keep track of which states have already been generated
   (define (new-pop-rules rule stateacc)
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))
-          (read (if (eq? EMP (second (first rule)))
-                    BLANK
-                    (second (first rule))))
           (pop (third (first rule)))
           (sigma (cons BLANK (sm-sigma p))))
-      ;; poplist -> (listof mttm-rule)
+      ;; poplist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
@@ -359,46 +362,53 @@
         (cond ((= 1 (length p))
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append-map (lambda (x)
-                               (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
-                                       (list `((,newst (,x ,BLANK)) (,tost (,x L)))))) sigma)))
+                 (append-map
+                  (lambda (x)
+                    (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
+                            (list `((,newst (,x ,BLANK)) (,tost (,x L)))))) sigma)))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2))
                       (newst2 (gen-state new-acc))
                       (new-acc2 (cons newst2 new-acc)))
-                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
-                                                         (list `((,newst (,x ,BLANK)) (,newst2 (,x L)))))) sigma)
+                 (append (append-map
+                          (lambda (x)
+                            (append
+                             (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
+                             (list `((,newst (,x ,BLANK)) (,newst2 (,x L)))))) sigma)
                          (new-pop-rules-helper (cdr p) newst2 new-acc2))))))            
       (new-pop-rules-helper pop fromst stateacc)))
 
-  ;; pda-rule -> (listof mttm-rule)
+  ;; pda-rule (listof state) -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that only pushes something
   ;; Accumulator invariants:
   ;;  stateacc = keep track of which states have already been generated
   (define (new-push-rules rule stateacc)
     (let ((fromst (first (first rule)))
-          (tost (first (second rule)))
-          (read (if (eq? EMP (second (first rule)))
-                    BLANK
-                    (second (first rule))))
+          (tost (first (second rule)))         
           (push (reverse (second (second rule))))
           (sigma (cons BLANK (sm-sigma p))))
-      ;; pushlist -> (listof mttm-rule)
+      ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
       ;;  stateacc2 = keep track of which states have already been generated
       (define (new-push-rules-helper p new-fromst stateacc2)
         (cond ((= 1 (length p))
-               (append-map (lambda (x) (list `((,new-fromst (,x ,BLANK)) (,tost (,x ,(car p)))))) sigma))
+               (append-map
+                (lambda (x) (list `((,new-fromst (,x ,BLANK)) (,tost (,x ,(car p)))))) sigma))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,BLANK)) (,new-fromst (,x ,(car p)))))
-                                                         (list `((,new-fromst (,x ,(car p))) (,newst (,x R)))))) sigma)
+                 (append (append-map
+                          (lambda (x)
+                            (append (list `((,new-fromst (,x ,BLANK)) (,new-fromst (,x ,(car p)))))
+                                    (list `((,new-fromst (,x ,(car p))) (,newst (,x R)))))) sigma)
                          (new-push-rules-helper (cdr p) newst new-acc))))))
       (let ((newst (gen-state stateacc)))
-        (append (append-map (lambda (y) (append-map (lambda (x) (list `((,fromst (,y ,x)) (,newst (,y R))))) sigma)) sigma)
+        (append (append-map
+                 (lambda (y)
+                   (append-map
+                    (lambda (x) (list `((,fromst (,y ,x)) (,newst (,y R))))) sigma)) sigma)
                 (new-push-rules-helper push newst (cons newst stateacc))))))
   
   ;; pda-rule -> (listof mttm-rule)
@@ -411,7 +421,7 @@
                                       (append-map permutations (filter (lambda (x) (= 2 (length x))) (combinations sigma))))))
       (map (lambda (x) `((,fromst ,x) (,tost ,x))) new-reads-actions)))
   
-  ;; (listof pda-rule) -> (listof mttm-rule)
+  ;; (listof pda-rule) (listof state) -> (listof mttm-rule)
   ;; Purpose: Convert pda rules to mttm rules
   ;; Accumulator invariants:
   ;;  states = keeps track of which states have already been generated
@@ -470,19 +480,18 @@
                            (new-rules-helper (rest rules) new-states))))
                 (else (append (new-empty-rules rule)
                               (new-rules-helper (rest rules) states)))))))
-  ;(displayln (new-read-pop-push-rules '((Q c (a a)) (S (b b))) '(A C F G)))
-  ;(new-rules-helper (sm-rules p) (sm-states p))
+
   (let* ((new-rules (new-rules-helper (sm-rules p) (sm-states p)))
          (new-states (get-states-from-mttm-rules new-rules))
          (new-final (gen-nt new-states))
          (new-rules2 (append (append-map (lambda (x) (list `((,x (,BLANK ,BLANK)) (,new-final (,BLANK ,BLANK))))) (sm-finals p)) new-rules)))
-      (make-mttm (cons new-final new-states)
-                 (remove-duplicates (append (sm-sigma p) (sm-gamma p)))
-                 (sm-start p)
-                 (list new-final)
-                 new-rules2
-                 2
-                 new-final)))
+    (make-mttm (cons new-final new-states)
+               (remove-duplicates (append (sm-sigma p) (sm-gamma p)))
+               (sm-start p)
+               (list new-final)
+               new-rules2
+               2
+               new-final)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
@@ -545,7 +554,6 @@
 
 To prove that the languages of the two machines are the same, we first need to
 prove that every computation possible with PDA may be carried out by MTTM.
-To this end, we prove the following theorem by induction on |w|.
 
 Let P = (make-ndpda K sig gam s F del). There exists a mttm P' that simulates P.
 Let P' = (make-mttm K' sig' s F' del' a n), such that:
