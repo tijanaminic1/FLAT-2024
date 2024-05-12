@@ -33,10 +33,7 @@
                              ((S a ε) (S (a)))
                              ((M b (a)) (M ε))
                              ((M ε ε) (F ε)))))
-
-;(sm-visualize a^nb^n)
-(sm-graph a^nb^n)
-
+           
 ;; Tests for a^nb^n
 (check-equal? (sm-apply a^nb^n '(a)) 'reject)
 (check-equal? (sm-apply a^nb^n '(b b)) 'reject)
@@ -47,176 +44,107 @@
 
 ;.................................................
 
-;; L = {w | w has an equal number of as and bs}
+;; L = {a^m b^n| m, n ≥ 0 ∧ m ̸= n}
 ;; Σ = {a b}
 ;; States:
-;;  S: ci = number as in ci = nunber bs in ci + number bs in stack, start state, final state
-;; Stack:
-;;  The stack is a (listof a) or (listof b)
-(define as=bs (make-ndpda '(S)
-                          '(a b)
-                          '(a b)
-                          'S
-                          '(S)
-                          '(((S a ε) (S (b)))
-                            ((S b ε) (S (a)))
-                            ((S a (a)) (S ε))
-                            ((S b (b)) (S ε)))))
-
-;(sm-visualize as=bs)
-(sm-graph as=bs)
-
-;; Tests for as=bs
-(check-equal? (sm-apply as=bs '(a)) 'reject)
-(check-equal? (sm-apply as=bs '(b b)) 'reject)
-(check-equal? (sm-apply as=bs '(a b b)) 'reject)
-(check-equal? (sm-apply as=bs '(a b a a b b)) 'accept)
-(check-equal? (sm-apply as=bs '()) 'accept)
-(check-equal? (sm-apply as=bs '(a a b b)) 'accept)
-
-;.................................................
-
-;; L = {a^i b^j | i ≤ j ≤ 2i}
-;; Σ = {a b}
-;; States:
-;;  S: number bs in stack = 2* number as in ci, ci = a*, stack = b*, start state
-;;  X: number as in ci <= (number bs in stack + number bs in ci) <= 2* number as in ci, ci = a*b*, stack = b*, final state
-;; Stack:
-;;  Stack is a (listof b), max of bs that can be read
-(define a^ib^j (make-ndpda '(S X)
+;;  S: ci = a^m, stack = b^m, start state
+;;  X: ci = a^mb^n, number of as in ci < (number of bs in ci + number of bs in stack), final state
+;;  Y: ci = a^mb^n, number of as in ci > (number of bs in ci + number of bs in stack), final state
+;; Strong enough?
+;;  If stack = ε -> number of as in ci < number of bs in ci
+;;  If stack = ε -> number of as in ci > number of bs in ci
+(define a^mb^n (make-ndpda '(S X Y)
                            '(a b)
                            '(b)
                            'S
-                           '(X)
-                           '(((S ε ε) (X ε))
-                             ((S a ε) (S (b b)))
+                           '(X Y)
+                           '(((S a ε) (S (b)))
+                             ((S ε ε) (X (b)))
                              ((X b (b)) (X ε))
-                             ((X b (b b)) (X ε)))))
-
-;(sm-visualize a^ib^j)
-(sm-graph a^ib^j)
-
-;; Tests for a^ib^j
-(check-equal? (sm-apply a^ib^j '(a a b)) 'reject)
-(check-equal? (sm-apply a^ib^j '(b b)) 'reject)
-(check-equal? (sm-apply a^ib^j '(a b b)) 'accept)
-(check-equal? (sm-apply a^ib^j '(a b a a b b)) 'reject)
-(check-equal? (sm-apply a^ib^j '()) 'accept)
-(check-equal? (sm-apply a^ib^j '(a a b b)) 'accept)
+                             ((X b ε) (X ε))
+                             ((S ε (b)) (Y ε))
+                             ((Y b (b)) (Y ε))
+                             ((Y ε (b)) (Y ε)))))
+           
+;; Tests for a^mb^n
+(check-equal? (sm-apply a^mb^n '(a a b b b)) 'accept)
+(check-equal? (sm-apply a^mb^n '(a a b)) 'accept)
+(check-equal? (sm-apply a^mb^n '(a a)) 'accept)
+(check-equal? (sm-apply a^mb^n '(a a b b)) 'reject)
+(check-equal? (sm-apply a^mb^n '(b a b a)) 'reject)
+(check-equal? (sm-apply a^mb^n '(a b)) 'reject)
 
 ;.................................................
 
-;; L = {w | w is a palindrome}
+;; L = {w | w has 3 times as many as than b}
 ;; Σ = {a b}
 ;; States:
-;;  S: ci = w and stack = w^R, start state
-;;  X: ci = uvxv^R, s = u^R, |x| = 1 if (odd? vxv^R)
-;;                               = 0 if (even? vxv^R)
-;; Is this condition strong enough for X to be a final state?
-;;  s = EMP ==> u^R = EMP ==> u = EMP ==> ci = vxv^R ==> ci is a palindrome :-)
-(define palindrome (make-ndpda '(S X)
-                               '(a b)
-                               '(a b)
-                               'S
-                               '(X)
-                               '(((S ε ε) (X ε))
-                                 ((S a ε) (X ε))
-                                 ((S b ε) (X ε))
-                                 ((S a ε) (S (a)))
-                                 ((S b ε) (S (b)))
-                                 ((X a (a)) (X ε))
-                                 ((X b (b)) (X ε)))))
+;;  S: ci = number bs in ci = 3 * number as in ci, stack = empty, final state
+;;  X: ci = (b v ba v baa v baaa)*, stack = (aaa v aa v a)*, number bs in ci = 3 * (number as in ci + number as in stack)
+;;  Y: ci = (aaab v aaba v abab)*a*, stack = (aab v ab v b)*, (number bs in ci + number bs in stack) = 3 * (number as in ci + number as in stack)
+;;  Z: ci = (aaab v aaba v abab)*b*, stack = (aab v ab v b)* v a*, (number bs in ci + number bs in stack) = 3 * (number as in ci + number as in stack)
+(define 3a1b (make-ndpda '(S X Z Y)
+                         '(a b)
+                         '(a b)
+                         'S
+                         '(S)
+                         '(((S b ε) (X (a a a)))
+                           ((X ε ε) (S ε))
+                           ((X a (a)) (X ε))
+                           ((S a ε) (Y (a a b)))
+                           ((Y a (a)) (Y ε))
+                           ((Y b (b)) (Z ε))
+                           ((Y b (a a b)) (Z (a a)))
+                           ((Y b (a b)) (Z (a)))
+                           ((Z ε ε) (Y ε))
+                           ((Z ε ε) (S ε))
+                           ((Y ε ε) (S ε)))))
+           
+;; Tests for 3a1b
+(check-equal? (sm-apply 3a1b '(a b a a)) 'accept)
+(check-equal? (sm-apply 3a1b '(a a a a b b a a)) 'accept)
+(check-equal? (sm-apply 3a1b '(a b a b a a a a)) 'accept)
+(check-equal? (sm-apply 3a1b '(b a a a a b a a)) 'accept)
+(check-equal? (sm-apply 3a1b '(a b)) 'reject)
+(check-equal? (sm-apply 3a1b '(a)) 'reject)
+(check-equal? (sm-apply 3a1b '(a a a b b)) 'reject)
 
-;(sm-visualize palindrome)
-(sm-graph palindrome)
+;.................................................
 
-;; Tests for palindrome
-(check-equal? (sm-apply palindrome '(a b a)) 'accept)
-(check-equal? (sm-apply palindrome '(a b a b b a b a)) 'accept)
-(check-equal? (sm-apply palindrome '(b)) 'accept)
-(check-equal? (sm-apply palindrome '(a b)) 'reject)
-(check-equal? (sm-apply palindrome '(b a b a)) 'reject)
-(check-equal? (sm-apply palindrome '(a b)) 'reject)
+;; L = {}
+;; Σ = {a b}
+;; States:
+;;  S: ci = empty, stack = empty, start state, final state
+(define emp (make-ndpda '(S)
+                        '(a b)
+                        '()
+                        'S
+                        '(S)
+                        '(((S ε ε) (S ε)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tests for emp
+(check-equal? (sm-apply emp '()) 'accept)
+(check-equal? (sm-apply emp '(a b b)) 'reject)
+(check-equal? (sm-apply emp '(b)) 'reject)
+(check-equal? (sm-apply emp '(a)) 'reject)
 
-;; Q: push state
-;; R: pop state
+;.................................................
 
-#;(define new-anbn (make-mttm '(S M F Q R Y)
-                              '(a b)
-                              'S
-                              '(Y)
-                              '(((S (a _)) (Q (a R)))
-                                ((S (a a)) (Q (a R)))
-                                ((S (a b)) (Q (a R)))
-                                ((Q (a _)) (M (R a)))
-                                ((Q (a _)) (S (R a)))
-      
-                                ((M (b a)) (R (b _)))
-                                ((R (b _)) (F (R L)))
-                                ((R (b _)) (M (R L)))
+;; L = {}
+;; Σ = {a b}
+;; States:
+;;  S: ci = empty, stack = empty, start state, final state
+(define emp2 (make-ndpda '(S)
+                         '(a b)
+                         '(b)
+                         'S
+                         '(S)
+                         '(((S ε (b)) (S (b)))
+                           ((S ε ε) (S (b)))
+                           ((S ε (b)) (S ε)))))
 
-                                ((F (_ _)) (Y (_ _))))
-                              2
-                              'Y))
-
-(define new-anbn (make-mttm '(S M F Q R Y)
-                            '(a b)
-                            'S
-                            '(Y)
-                            '(((S (a _)) (Q (a R)))
-                              ((S (a a)) (Q (a R)))
-                              ((S (a b)) (Q (a R)))
-                              ;((Q (a _)) (M (R a)))
-                              ((Q (a _)) (S (R a)))
-
-                              ((S (a a)) (M (a a)))
-                              ((S (b b)) (M (b b)))
-                              ((S (_ _)) (M (_ _)))
-                              ((S (a b)) (M (a b)))
-                              ((S (b a)) (M (b a)))
-                              ((S (a _)) (M (a _)))
-                              ((S (_ a)) (M (_ a)))
-                              ((S (b _)) (M (b _)))
-                              ((S (_ b)) (M (_ b)))
-                              
-      
-                              ((M (b a)) (R (b _)))
-                              ;((R (b _)) (F (R L)))
-
-                              ((M (a a)) (F (a a)))
-                              ((M (b b)) (F (b b)))
-                              ((M (_ _)) (F (_ _)))
-                              ((M (a b)) (F (a b)))
-                              ((M (b a)) (F (b a)))
-                              ((M (a _)) (F (a _)))
-                              ((M (_ a)) (F (_ a)))
-                              ((M (b _)) (F (b _)))
-                              ((M (_ b)) (F (_ b)))
-                              
-                              ((R (b _)) (M (R L)))
-
-                              ((F (_ _)) (Y (_ _))))
-                            2
-                            'Y))
-
-;(gen-nt '(S M F Q R Y N))
-
-(sm-graph a^nb^n)
-(sm-graph new-anbn)
-(sm-showtransitions new-anbn '(a a b b))
-;(sm-visualize new-anbn)
-
-(define anbn (make-ndpda '(S M F)
-                           '(a b)
-                           '(a c b)
-                           'S
-                           '(F)
-                           '(((S ε ε) (M ε))
-                             ((S a ε) (S (a)))
-                             ((M a (b)) (M (c)))
-                             ((M ε ε) (F ε)))))
+;; Tests for emp2
+(check-equal? (sm-apply emp2 '()) 'accept)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -286,10 +214,12 @@
                          (push-helper push newst3 new-acc3))))
               (else
                (let* ((newst (gen-state stateacc2))
-                      (new-acc (cons newst stateacc2)))
+                      (new-acc (cons newst stateacc2))
+                      (newst2 (gen-state new-acc))
+                      (new-acc2 (cons newst2 new-acc)))
                  (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
-                         (list `((,newst (,read ,BLANK)) (,newst (,read L))))
-                         (new-read-pop-push-rules-helper (cdr p) newst new-acc)))))) 
+                         (list `((,newst (,read ,BLANK)) (,newst2 (,read L))))
+                         (new-read-pop-push-rules-helper (cdr p) newst2 new-acc2)))))) 
       (new-read-pop-push-rules-helper pop fromst stateacc)))
   
   ;; pda-rule -> (listof mttm-rule)
@@ -313,10 +243,12 @@
                          (list `((,newst (,read ,BLANK)) (,tost (R L)))))))
               (else
                (let* ((newst (gen-state stateacc2))
-                      (new-acc (cons newst stateacc2)))
+                      (new-acc (cons newst stateacc2))
+                      (newst2 (gen-state new-acc))
+                      (new-acc2 (cons newst2 new-acc)))
                  (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
-                         (list `((,newst (,read ,BLANK)) (,newst (,read L))))
-                         (new-read-pop-rules-helper (cdr p) newst new-acc))))))             
+                         (list `((,newst (,read ,BLANK)) (,newst2 (,read L))))
+                         (new-read-pop-rules-helper (cdr p) newst2 new-acc2))))))             
       (new-read-pop-rules-helper pop fromst stateacc)))
 
   ;; pda-rule -> (listof mttm-rule)
@@ -365,12 +297,12 @@
       ;;  stateacc2 = keep track of which states have already been generated
       (define (push-helper p new-fromst stateacc2)
         (cond ((= 1 (length p))
-               (list `((,new-fromst (,read ,BLANK)) (,tost (,read ,(car p))))))
+               (append-map (lambda (x) (list `((,new-fromst (,x ,BLANK)) (,tost (,x ,(car p)))))) sigma))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,read ,BLANK)) (,new-fromst (,read ,(car p)))))
-                         (list `((,new-fromst (,read ,(car p))) (,newst (,read R))))
+                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,BLANK)) (,new-fromst (,x ,(car p)))))
+                                                         (list `((,new-fromst (,x ,(car p))) (,newst (,x R)))))) sigma)
                          (push-helper (cdr p) newst new-acc))))))
       ;; poplist -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
@@ -384,16 +316,18 @@
                       (new-acc2 (cons newst2 new-acc))
                       (newst3 (gen-state new-acc2))
                       (new-acc3 (cons newst3 new-acc2)))
-                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
-                         (list `((,newst (,read ,BLANK)) (,newst2 (,read L))))
-                         (append-map (lambda (x) (list `((,newst2 (,read ,x)) (,newst3 (,read R))))) sigma)
+                 (append (append-map (lambda (y) (append (list `((,new-fromst (,y ,(car p))) (,newst (,y ,BLANK))))
+                                                         (list `((,newst (,y ,BLANK)) (,newst2 (,y L)))) 
+                                                         (append-map (lambda (x) (list `((,newst2 (,y ,x)) (,newst3 (,y R))))) sigma))) sigma)
                          (push-helper push newst3 new-acc3))))
               (else
                (let* ((newst (gen-state stateacc2))
-                      (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
-                         (list `((,newst (,read ,BLANK)) (,newst (,read L))))
-                         (new-pop-push-rules-helper (cdr p) newst new-acc)))))) 
+                      (new-acc (cons newst stateacc2))
+                      (newst2 (gen-state new-acc))
+                      (new-acc2 (cons newst2 new-acc)))
+                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
+                                                         (list `((,newst (,x ,BLANK)) (,newst2 (,x L)))))) sigma)
+                         (new-pop-push-rules-helper (cdr p) newst2 new-acc2)))))) 
       (new-pop-push-rules-helper pop fromst stateacc)))
   
   ;; pda-rule -> (listof mttm-rule)
@@ -415,7 +349,8 @@
           (read (if (eq? EMP (second (first rule)))
                     BLANK
                     (second (first rule))))
-          (pop (third (first rule))))
+          (pop (third (first rule)))
+          (sigma (cons BLANK (sm-sigma p))))
       ;; poplist -> (listof mttm-rule)
       ;; Purpose: Traverse the pop list
       ;; Accumulator invariants:
@@ -424,14 +359,17 @@
         (cond ((= 1 (length p))
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
-                         (list `((,newst (,read ,BLANK)) (,tost (,read L)))))))
+                 (append-map (lambda (x)
+                               (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
+                                       (list `((,newst (,x ,BLANK)) (,tost (,x L)))))) sigma)))
               (else
                (let* ((newst (gen-state stateacc2))
-                      (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
-                         (list `((,newst (,read ,BLANK)) (,newst (,read L))))
-                         (new-pop-rules-helper (cdr p) newst new-acc))))))             
+                      (new-acc (cons newst stateacc2))
+                      (newst2 (gen-state new-acc))
+                      (new-acc2 (cons newst2 new-acc)))
+                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,(car p))) (,newst (,x ,BLANK))))
+                                                         (list `((,newst (,x ,BLANK)) (,newst2 (,x L)))))) sigma)
+                         (new-pop-rules-helper (cdr p) newst2 new-acc2))))))            
       (new-pop-rules-helper pop fromst stateacc)))
 
   ;; pda-rule -> (listof mttm-rule)
@@ -452,15 +390,15 @@
       ;;  stateacc2 = keep track of which states have already been generated
       (define (new-push-rules-helper p new-fromst stateacc2)
         (cond ((= 1 (length p))
-               (list `((,new-fromst (,read ,BLANK)) (,tost (,read ,(car p))))))
+               (append-map (lambda (x) (list `((,new-fromst (,x ,BLANK)) (,tost (,x ,(car p)))))) sigma))
               (else
                (let* ((newst (gen-state stateacc2))
                       (new-acc (cons newst stateacc2)))
-                 (append (list `((,new-fromst (,read ,BLANK)) (,new-fromst (,read ,(car p)))))
-                         (list `((,new-fromst (,read ,(car p))) (,newst (,read R))))
+                 (append (append-map (lambda (x) (append (list `((,new-fromst (,x ,BLANK)) (,new-fromst (,x ,(car p)))))
+                                                         (list `((,new-fromst (,x ,(car p))) (,newst (,x R)))))) sigma)
                          (new-push-rules-helper (cdr p) newst new-acc))))))
       (let ((newst (gen-state stateacc)))
-        (append (append-map (lambda (x) (list `((,fromst (,read ,x)) (,newst (,read R))))) sigma)
+        (append (append-map (lambda (y) (append-map (lambda (x) (list `((,fromst (,y ,x)) (,newst (,y R))))) sigma)) sigma)
                 (new-push-rules-helper push newst (cons newst stateacc))))))
   
   ;; pda-rule -> (listof mttm-rule)
@@ -547,18 +485,59 @@
                  new-final)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tests
 
+;; Tests for a^nb^n
+(check-equal? (sm-apply a^nb^n '(a)) 
+              (sm-apply (pda->mttm a^nb^n) '(a)))
+(check-equal? (sm-apply a^nb^n '(b b))
+              (sm-apply (pda->mttm a^nb^n) '(b b)))
+(check-equal? (sm-apply a^nb^n '(a b b))
+              (sm-apply (pda->mttm a^nb^n) '(a b b)))
+(check-equal? (sm-apply a^nb^n '(a b a a b b))
+              (sm-apply (pda->mttm a^nb^n) '(a b a a b b)))
+(check-equal? (sm-apply a^nb^n '())
+              (sm-apply (pda->mttm a^nb^n) '()))
+(check-equal? (sm-apply a^nb^n '(a a b b))
+              (sm-apply (pda->mttm a^nb^n) '(a a b b)))
 
-;(append-map permutations (filter (lambda (x) (= 2 (length x))) (combinations '(_ a b))))
+;; Tests for a^mb^n
+(check-equal? (sm-apply a^mb^n '(a a b b b))
+              (sm-apply (pda->mttm a^mb^n) '(a a b b b)))
+(check-equal? (sm-apply a^mb^n '(a a b))
+              (sm-apply (pda->mttm a^mb^n) '(a a b)))
+(check-equal? (sm-apply a^mb^n '(a a))
+              (sm-apply (pda->mttm a^mb^n) '(a a)))
+(check-equal? (sm-apply a^mb^n '(a a b b))
+              (sm-apply (pda->mttm a^mb^n) '(a a b b)))
+(check-equal? (sm-apply a^mb^n '(b a b a))
+              (sm-apply (pda->mttm a^mb^n) '(b a b a)))
+(check-equal? (sm-apply a^mb^n '(a b))
+              (sm-apply (pda->mttm a^mb^n) '(a b)))
 
-(sm-graph a^nb^n)
-(sm-graph (pda->mttm a^nb^n))
+;; Tests for 3a1b
+(check-equal? (sm-apply 3a1b '(a b a a))
+              (sm-apply (pda->mttm 3a1b) '(a b a a)))
+(check-equal? (sm-apply 3a1b '(a a a a b b a a))
+              (sm-apply (pda->mttm 3a1b) '(a a a a b b a a)))
+(check-equal? (sm-apply 3a1b '(a b a b a a a a))
+              (sm-apply (pda->mttm 3a1b) '(a b a b a a a a)))
+(check-equal? (sm-apply 3a1b '(b a a a a b a a))
+              (sm-apply (pda->mttm 3a1b) '(b a a a a b a a)))
+(check-equal? (sm-apply 3a1b '(a b))
+              (sm-apply (pda->mttm 3a1b) '(a b)))
+(check-equal? (sm-apply 3a1b '(a))
+              (sm-apply (pda->mttm 3a1b) '(a)))
+(check-equal? (sm-apply 3a1b '(a a a b b))
+              (sm-apply (pda->mttm 3a1b) '(a a a b b)))
 
-(sm-graph a^ib^j)
-(sm-graph (pda->mttm a^ib^j))
+;; Tests for emp
+(check-equal? (sm-apply emp '())
+              (sm-apply (pda->mttm emp) '()))
 
-(sm-graph anbn)
-(sm-graph (pda->mttm anbn))
+;; Tests for emp2
+(check-equal? (sm-apply emp2 '())
+              (sm-apply (pda->mttm emp2) '()))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -614,8 +593,8 @@ For P' to transition from the same src to the same dst, the machine starts in sr
 created state for every element popped, then transitions through a newly created state for every element pushed, and ends in dst.
 The transition from src to the first newly created state reads the element on tape 0 and writes it (it is not consumed until everything is popped and pushed).
 This same transition also reads the element on tape 1 and if it is the first element of the pop list it writes a blank. Then, in that newly
-created state, it reads the blank and moves the head on tape 1 left (simulating the new top of the stack). This is repeated for all elements in the pop list.
-After popping the last element of the list (writing a blank on tape 1), P' transitions to some new state A and moves the head on tape 1
+created state, it reads the blank and moves the head on tape 1 left (simulating the new top of the stack) and transitions to another newly created state.
+This is repeated for all elements in the pop list. After popping the last element of the list (writing a blank on tape 1), P' transitions to some new state A and moves the head on tape 1
 left. Like this, the next element in ui (tape 0) has been consumed and the elements from the pop list were removed from the stack (tape 1).
 A is the last state of the pop sequence and the first state of the push sequence. Before using the list of push elements, we reverse it to push
 the start of the list first. The transition from A to the first newly created state of the push sequence reads the element on tape 0 and writes it.
