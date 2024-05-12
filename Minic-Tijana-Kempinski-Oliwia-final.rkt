@@ -182,7 +182,7 @@
           (read (second (first rule)))
           (pop (third (first rule)))
           (push (reverse (second (second rule))))
-          (sigma (cons BLANK (sm-sigma p))))
+          (gamma (cons BLANK (sm-gamma p))))
       ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
@@ -212,7 +212,7 @@
                       (new-acc3 (cons newst3 new-acc2)))
                  (append (list `((,new-fromst (,read ,(car p))) (,newst (,read ,BLANK))))
                          (list `((,newst (,read ,BLANK)) (,newst2 (,read L))))
-                         (append-map (lambda (x) (list `((,newst2 (,read ,x)) (,newst3 (,read R))))) sigma)
+                         (append-map (lambda (x) (list `((,newst2 (,read ,x)) (,newst3 (,read R))))) gamma)
                          (push-helper push newst3 new-acc3))))
               (else
                (let* ((newst (gen-state stateacc2))
@@ -262,7 +262,7 @@
           (tost (first (second rule)))
           (read (second (first rule)))
           (push (reverse (second (second rule))))
-          (sigma (cons BLANK (sm-sigma p))))
+          (gamma (cons BLANK (sm-gamma p))))
       ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
@@ -277,7 +277,7 @@
                          (list `((,new-fromst (,read ,(car p))) (,newst (,read R))))
                          (new-read-push-rules-helper (cdr p) newst new-acc))))))
       (let ((newst (gen-state stateacc)))
-        (append (append-map (lambda (x) (list `((,fromst (,read ,x)) (,newst (,read R))))) sigma)
+        (append (append-map (lambda (x) (list `((,fromst (,read ,x)) (,newst (,read R))))) gamma)
                 (new-read-push-rules-helper push newst (cons newst stateacc))))))
 
   ;; pda-rule (listof state) -> (listof mttm-rule)
@@ -292,7 +292,8 @@
                     (second (first rule))))
           (pop (third (first rule)))
           (push (reverse (second (second rule))))
-          (sigma (cons BLANK (sm-sigma p))))
+          (sigma (cons BLANK (sm-sigma p)))
+          (gamma (cons BLANK (sm-gamma p))))
       ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
@@ -325,7 +326,7 @@
                           (lambda (y)
                             (append (list `((,new-fromst (,y ,(car p))) (,newst (,y ,BLANK))))
                                     (list `((,newst (,y ,BLANK)) (,newst2 (,y L)))) 
-                                    (append-map (lambda (x) (list `((,newst2 (,y ,x)) (,newst3 (,y R))))) sigma))) sigma)
+                                    (append-map (lambda (x) (list `((,newst2 (,y ,x)) (,newst3 (,y R))))) gamma))) sigma)
                          (push-helper push newst3 new-acc3))))
               (else
                (let* ((newst (gen-state stateacc2)) (new-acc (cons newst stateacc2))
@@ -342,8 +343,8 @@
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))
           (read (second (first rule)))
-          (sigma (cons BLANK (sm-sigma p))))
-      (map (lambda (x) `((,fromst (,read ,x)) (,tost (R ,x)))) sigma)))
+          (gamma (cons BLANK (sm-gamma p))))
+      (map (lambda (x) `((,fromst (,read ,x)) (,tost (R ,x)))) gamma)))
 
   ;; pda-rule (listof state) -> (listof mttm-rule)
   ;; Purpose: Make mttm rules for a pda rule that only pops something
@@ -387,7 +388,8 @@
     (let ((fromst (first (first rule)))
           (tost (first (second rule)))         
           (push (reverse (second (second rule))))
-          (sigma (cons BLANK (sm-sigma p))))
+          (sigma (cons BLANK (sm-sigma p)))
+          (gamma (cons BLANK (sm-gamma p))))
       ;; pushlist state (listof state) -> (listof mttm-rule)
       ;; Purpose: Traverse the push list
       ;; Accumulator invariants:
@@ -408,7 +410,7 @@
         (append (append-map
                  (lambda (y)
                    (append-map
-                    (lambda (x) (list `((,fromst (,y ,x)) (,newst (,y R))))) sigma)) sigma)
+                    (lambda (x) (list `((,fromst (,y ,x)) (,newst (,y R))))) gamma)) sigma)
                 (new-push-rules-helper push newst (cons newst stateacc))))))
   
   ;; pda-rule -> (listof mttm-rule)
@@ -417,8 +419,9 @@
     (let* ((fromst (first (first rule)))
            (tost (first (second rule)))
            (sigma (cons BLANK (sm-sigma p)))
-           (new-reads-actions (append (map (lambda (x) (list x x)) sigma)
-                                      (append-map permutations (filter (lambda (x) (= 2 (length x))) (combinations sigma))))))
+           (gamma (cons BLANK (sm-gamma p)))
+           (new-reads-actions
+            (append-map (lambda (x) (map (lambda (y) (list x y)) gamma)) sigma)))
       (map (lambda (x) `((,fromst ,x) (,tost ,x))) new-reads-actions)))
   
   ;; (listof pda-rule) (listof state) -> (listof mttm-rule)
